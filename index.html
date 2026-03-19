@@ -231,23 +231,19 @@
 
   .section-header {
     max-width: 1100px;
-    margin: 0 auto 14px auto;
-    font-size: 1.1rem;
+    margin: 28px auto 14px auto;
+    font-size: 1.3rem;
     font-weight: 700;
     color: var(--text-bright);
     letter-spacing: -0.3px;
-    padding-left: 4px;
-  }
-
-  .section-header:not(:first-child) {
-    margin-top: 28px;
+    text-align: center;
   }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>Subway Live</h1>
+  <h1>Subway Live &mdash; Borough Hall</h1>
   <div class="status-bar">
     <span><span class="live-dot"></span>Live data</span>
     <span id="lastUpdate">Loading...</span>
@@ -272,7 +268,7 @@ const POLL_INTERVAL = 15;
 // Station groups with their line configs
 const STATION_GROUPS = [
   {
-    label: 'Borough Hall',
+    label: '',
     lines: [
       {
         name: '2 / 3',
@@ -293,12 +289,7 @@ const STATION_GROUPS = [
         routes: ['4', '5'],
         station: 'Borough Hall',
         direction: 'Manhattan-bound (Northbound)'
-      }
-    ]
-  },
-  {
-    label: 'Court St / Bergen St',
-    lines: [
+      },
       {
         name: 'R',
         badges: ['R'],
@@ -308,7 +299,12 @@ const STATION_GROUPS = [
         routes: ['R'],
         station: 'Court St',
         direction: 'Manhattan-bound (Northbound)'
-      },
+      }
+    ]
+  },
+  {
+    label: 'Smith St',
+    lines: [
       {
         name: 'F',
         badges: ['F'],
@@ -427,7 +423,9 @@ async function refresh() {
     let html = '';
 
     for (const stationGroup of STATION_GROUPS) {
-      html += `<div class="section-header">${stationGroup.label}</div>`;
+      if (stationGroup.label) {
+        html += `<div class="section-header">${stationGroup.label}</div>`;
+      }
       html += '<div class="lines-grid">';
 
     for (const group of stationGroup.lines) {
