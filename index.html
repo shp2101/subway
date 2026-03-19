@@ -108,6 +108,7 @@
   .badge-2, .badge-3 { background: #ee352e; }
   .badge-4, .badge-5 { background: #00933c; }
   .badge-R { background: #fccc0a; color: #000; }
+  .badge-F { background: #ff6319; }
 
   .line-direction {
     font-size: 0.75rem;
@@ -152,6 +153,7 @@
   .route-4 { background: #00933c; }
   .route-5 { background: #00933c; }
   .route-R { background: #fccc0a; color: #000; }
+  .route-F { background: #ff6319; }
 
   .train-info { flex: 1; }
 
@@ -283,6 +285,16 @@ const LINE_GROUPS = [
     stopId: 'R28N',
     routes: ['R'],
     station: 'Court St',
+    direction: 'Manhattan-bound (Northbound)'
+  },
+  {
+    name: 'F',
+    badges: ['F'],
+    badgeClass: ['badge-F'],
+    feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-bdfm',
+    stopId: 'F20N',
+    routes: ['F'],
+    station: 'Bergen St',
     direction: 'Manhattan-bound (Northbound)'
   }
 ];
