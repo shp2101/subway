@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subway Live - Borough Hall</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/protobufjs/7.2.6/protobuf.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --card-border: #2a2d3a;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-bright: #f8fafc;
+    --accent-green: #22c55e;
+    --accent-red: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: -0.5px;
+  }
+
+  .status-bar {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  .status-bar .live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .lines-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .line-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 24px;
+    transition: border-color 0.3s;
+  }
+
+  .line-card:hover { border-color: #555; }
+
+  .line-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .line-badges {
+    display: flex;
+    gap: 6px;
+  }
+
+  .line-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: white;
+  }
+
+  .badge-2, .badge-3 { background: #ee352e; }
+  .badge-4, .badge-5 { background: #00933c; }
+  .badge-R { background: #fccc0a; color: #000; }
+
+  .line-direction {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  .train-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .train-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+  }
+
+  .train-item:first-child {
+    background: rgba(255,255,255,0.06);
+  }
+
+  .train-route-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+    margin-right: 14px;
+    flex-shrink: 0;
+  }
+
+  .route-2 { background: #ee352e; }
+  .route-3 { background: #ee352e; }
+  .route-4 { background: #00933c; }
+  .route-5 { background: #00933c; }
+  .route-R { background: #fccc0a; color: #000; }
+
+  .train-info { flex: 1; }
+
+  .train-eta {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    line-height: 1;
+  }
+
+  .train-eta-unit {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    margin-left: 4px;
+  }
+
+  .train-time {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .train-item:first-child .train-eta {
+    font-size: 2rem;
+  }
+
+  .no-trains {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+
+  .countdown {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+
+  .countdown span { color: var(--accent-green); font-weight: 600; }
+
+  .error-banner {
+    text-align: center;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: var(--accent-red);
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    display: none;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 60px;
+    color: var(--text-dim);
+    font-size: 0.95rem;
+  }
+
+  .loading .spinner {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--card-border);
+    border-top-color: var(--accent-green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Subway Live &mdash; Borough Hall</h1>
+  <div class="status-bar">
+    <span><span class="live-dot"></span>Live data</span>
+    <span id="lastUpdate">Loading...</span>
+    <span id="nextRefresh"></span>
+  </div>
+</div>
+
+<div class="error-banner" id="errorBanner"></div>
+
+<div id="dashboard">
+  <div class="loading">
+    <div class="spinner"></div><br>
+    Connecting to MTA...
+  </div>
+</div>
+
+<div class="countdown" id="countdown"></div>
+
+<script>
+const POLL_INTERVAL = 15;
+
+// Feed configs: which feed URL, which stop IDs, display info
+const LINE_GROUPS = [
+  {
+    name: '2 / 3',
+    badges: ['2', '3'],
+    badgeClass: ['badge-2', 'badge-3'],
+    feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs',
+    stopId: '232N',
+    routes: ['2', '3'],
+    station: 'Borough Hall',
+    direction: 'Manhattan-bound (Northbound)'
+  },
+  {
+    name: '4 / 5',
+    badges: ['4', '5'],
+    badgeClass: ['badge-4', 'badge-5'],
+    feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs',
+    stopId: '423N',
+    routes: ['4', '5'],
+    station: 'Borough Hall',
+    direction: 'Manhattan-bound (Northbound)'
+  },
+  {
+    name: 'R',
+    badges: ['R'],
+    badgeClass: ['badge-R'],
+    feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw',
+    stopId: 'R28N',
+    routes: ['R'],
+    station: 'Court St',
+    direction: 'Manhattan-bound (Northbound)'
+  }
+];
+
+// Minimal GTFS-RT protobuf schema (only what we need)
+const GTFS_PROTO = `
+syntax = "proto2";
+
+message FeedMessage {
+  optional FeedHeader header = 1;
+  repeated FeedEntity entity = 2;
+}
+
+message FeedHeader {
+  optional string gtfs_realtime_version = 1;
+  optional uint64 timestamp = 2;
+}
+
+message FeedEntity {
+  optional string id = 1;
+  optional TripUpdate trip_update = 3;
+}
+
+message TripUpdate {
+  optional TripDescriptor trip = 1;
+  repeated StopTimeUpdate stop_time_update = 2;
+}
+
+message TripDescriptor {
+  optional string trip_id = 1;
+  optional string route_id = 5;
+}
+
+message StopTimeUpdate {
+  optional uint32 stop_sequence = 1;
+  optional StopTimeEvent arrival = 2;
+  optional StopTimeEvent departure = 3;
+  optional string stop_id = 4;
+}
+
+message StopTimeEvent {
+  optional int64 time = 2;
+}
+`;
+
+let protoRoot = null;
+let FeedMessage = null;
+let countdownSec = POLL_INTERVAL;
+let countdownTimer = null;
+
+async function initProto() {
+  protoRoot = protobuf.parse(GTFS_PROTO, { keepCase: true }).root;
+  FeedMessage = protoRoot.lookupType('FeedMessage');
+}
+
+async function fetchFeed(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${url}`);
+  const buf = await resp.arrayBuffer();
+  return FeedMessage.decode(new Uint8Array(buf));
+}
+
+function extractArrivals(feed, stopId, routeFilter) {
+  const now = Math.floor(Date.now() / 1000);
+  const arrivals = [];
+
+  for (const entity of feed.entity) {
+    if (!entity.trip_update) continue;
+    const route = entity.trip_update.trip.route_id;
+    if (!routeFilter.includes(route)) continue;
+
+    for (const stu of entity.trip_update.stop_time_update) {
+      if (stu.stop_id !== stopId) continue;
+      const arrTime = stu.arrival ? Number(stu.arrival.time) : (stu.departure ? Number(stu.departure.time) : 0);
+      if (arrTime <= now) continue;
+      arrivals.push({
+        route: route,
+        arrivalTime: arrTime,
+        minutes: (arrTime - now) / 60
+      });
+    }
+  }
+
+  arrivals.sort((a, b) => a.arrivalTime - b.arrivalTime);
+  return arrivals.slice(0, 3);
+}
+
+function formatTime(timestamp) {
+  const d = new Date(timestamp * 1000);
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+// Cache feeds by URL to avoid duplicate fetches
+async function refresh() {
+  try {
+    // Fetch unique feed URLs
+    const feedUrls = [...new Set(LINE_GROUPS.map(g => g.feedUrl))];
+    const feedCache = {};
+    await Promise.all(feedUrls.map(async url => {
+      feedCache[url] = await fetchFeed(url);
+    }));
+
+    let html = '<div class="lines-grid">';
+
+    for (const group of LINE_GROUPS) {
+      const feed = feedCache[group.feedUrl];
+      const arrivals = extractArrivals(feed, group.stopId, group.routes);
+
+      html += `<div class="line-card">`;
+      html += `<div class="line-header"><div class="line-badges">`;
+      group.badges.forEach((b, i) => {
+        html += `<div class="line-badge ${group.badgeClass[i]}">${b}</div>`;
+      });
+      html += `</div></div>`;
+      html += `<div class="line-direction">${group.station} &mdash; ${group.direction}</div>`;
+
+      if (arrivals.length === 0) {
+        html += `<div class="no-trains">No trains scheduled</div>`;
+      } else {
+        html += `<div class="train-list">`;
+        arrivals.forEach(a => {
+          const mins = Math.round(a.minutes);
+          const etaText = mins <= 0 ? 'NOW' : mins;
+          const unitText = mins <= 0 ? '' : '<span class="train-eta-unit">min</span>';
+          html += `<div class="train-item">`;
+          html += `<div class="train-route-badge route-${a.route}">${a.route}</div>`;
+          html += `<div class="train-info">`;
+          html += `<div class="train-eta">${etaText}${unitText}</div>`;
+          html += `<div class="train-time">${formatTime(a.arrivalTime)}</div>`;
+          html += `</div></div>`;
+        });
+        html += `</div>`;
+      }
+
+      html += `</div>`;
+    }
+
+    html += '</div>';
+    document.getElementById('dashboard').innerHTML = html;
+
+    const now = new Date();
+    document.getElementById('lastUpdate').textContent =
+      `Updated ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;
+    document.getElementById('errorBanner').style.display = 'none';
+  } catch (err) {
+    const banner = document.getElementById('errorBanner');
+    banner.textContent = `Failed to fetch data: ${err.message}. Retrying...`;
+    banner.style.display = 'block';
+    console.error(err);
+  }
+
+  countdownSec = POLL_INTERVAL;
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    countdownSec--;
+    if (countdownSec <= 0) countdownSec = POLL_INTERVAL;
+    document.getElementById('countdown').innerHTML =
+      `Next refresh in <span>${countdownSec}s</span>`;
+  }, 1000);
+}
+
+async function main() {
+  await initProto();
+  await refresh();
+  setInterval(refresh, POLL_INTERVAL * 1000);
+}
+
+main();
+</script>
+</body>
+</html>
