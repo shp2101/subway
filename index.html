@@ -228,12 +228,26 @@
   }
 
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .section-header {
+    max-width: 1100px;
+    margin: 0 auto 14px auto;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: -0.3px;
+    padding-left: 4px;
+  }
+
+  .section-header:not(:first-child) {
+    margin-top: 28px;
+  }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>Subway Live &mdash; Borough Hall</h1>
+  <h1>Subway Live</h1>
   <div class="status-bar">
     <span><span class="live-dot"></span>Live data</span>
     <span id="lastUpdate">Loading...</span>
@@ -255,49 +269,62 @@
 <script>
 const POLL_INTERVAL = 15;
 
-// Feed configs: which feed URL, which stop IDs, display info
-const LINE_GROUPS = [
+// Station groups with their line configs
+const STATION_GROUPS = [
   {
-    name: '2 / 3',
-    badges: ['2', '3'],
-    badgeClass: ['badge-2', 'badge-3'],
-    feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs',
-    stopId: '232N',
-    routes: ['2', '3'],
-    station: 'Borough Hall',
-    direction: 'Manhattan-bound (Northbound)'
+    label: 'Borough Hall',
+    lines: [
+      {
+        name: '2 / 3',
+        badges: ['2', '3'],
+        badgeClass: ['badge-2', 'badge-3'],
+        feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs',
+        stopId: '232N',
+        routes: ['2', '3'],
+        station: 'Borough Hall',
+        direction: 'Manhattan-bound (Northbound)'
+      },
+      {
+        name: '4 / 5',
+        badges: ['4', '5'],
+        badgeClass: ['badge-4', 'badge-5'],
+        feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs',
+        stopId: '423N',
+        routes: ['4', '5'],
+        station: 'Borough Hall',
+        direction: 'Manhattan-bound (Northbound)'
+      }
+    ]
   },
   {
-    name: '4 / 5',
-    badges: ['4', '5'],
-    badgeClass: ['badge-4', 'badge-5'],
-    feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs',
-    stopId: '423N',
-    routes: ['4', '5'],
-    station: 'Borough Hall',
-    direction: 'Manhattan-bound (Northbound)'
-  },
-  {
-    name: 'R',
-    badges: ['R'],
-    badgeClass: ['badge-R'],
-    feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw',
-    stopId: 'R28N',
-    routes: ['R'],
-    station: 'Court St',
-    direction: 'Manhattan-bound (Northbound)'
-  },
-  {
-    name: 'F',
-    badges: ['F'],
-    badgeClass: ['badge-F'],
-    feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-bdfm',
-    stopId: 'F20N',
-    routes: ['F'],
-    station: 'Bergen St',
-    direction: 'Manhattan-bound (Northbound)'
+    label: 'Court St / Bergen St',
+    lines: [
+      {
+        name: 'R',
+        badges: ['R'],
+        badgeClass: ['badge-R'],
+        feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-nqrw',
+        stopId: 'R28N',
+        routes: ['R'],
+        station: 'Court St',
+        direction: 'Manhattan-bound (Northbound)'
+      },
+      {
+        name: 'F',
+        badges: ['F'],
+        badgeClass: ['badge-F'],
+        feedUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-bdfm',
+        stopId: 'F20N',
+        routes: ['F'],
+        station: 'Bergen St',
+        direction: 'Manhattan-bound (Northbound)'
+      }
+    ]
   }
 ];
+
+// Flatten for feed fetching
+const LINE_GROUPS = STATION_GROUPS.flatMap(sg => sg.lines);
 
 // Minimal GTFS-RT protobuf schema (only what we need)
 const GTFS_PROTO = `
@@ -397,9 +424,13 @@ async function refresh() {
       feedCache[url] = await fetchFeed(url);
     }));
 
-    let html = '<div class="lines-grid">';
+    let html = '';
 
-    for (const group of LINE_GROUPS) {
+    for (const stationGroup of STATION_GROUPS) {
+      html += `<div class="section-header">${stationGroup.label}</div>`;
+      html += '<div class="lines-grid">';
+
+    for (const group of stationGroup.lines) {
       const feed = feedCache[group.feedUrl];
       const arrivals = extractArrivals(feed, group.stopId, group.routes);
 
@@ -432,7 +463,9 @@ async function refresh() {
       html += `</div>`;
     }
 
-    html += '</div>';
+    html += '</div>'; // close lines-grid
+    } // close stationGroup loop
+
     document.getElementById('dashboard').innerHTML = html;
 
     const now = new Date();
